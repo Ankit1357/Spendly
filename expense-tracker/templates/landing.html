@@ -23,7 +23,7 @@
     </p>
     <div class="hero-actions">
         <a href="{{ url_for('register') }}" class="hero-btn">Create free account</a>
-        <a href="#" class="hero-btn">See how it works</a>
+        <a href="#" class="hero-btn" id="howItWorksBtn">See how it works</a>
     </div>
 
     <div class="hero-dashboard">
@@ -100,4 +100,59 @@
     </div>
 </section>
 
+<!-- "See how it works" video modal -->
+<div class="video-modal" id="videoModal" aria-hidden="true">
+    <div class="video-modal-backdrop" data-close></div>
+    <div class="video-modal-dialog" role="dialog" aria-modal="true" aria-label="How Spendly works">
+        <button class="video-modal-close" type="button" aria-label="Close" data-close>&times;</button>
+        <div class="video-modal-frame">
+            <iframe id="videoModalIframe"
+                    src=""
+                    data-src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&autoplay=1"
+                    title="How Spendly works"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var openBtn = document.getElementById('howItWorksBtn');
+    var modal = document.getElementById('videoModal');
+    var iframe = document.getElementById('videoModalIframe');
+    if (!openBtn || !modal || !iframe) return;
+
+    function openModal(e) {
+        if (e) e.preventDefault();
+        iframe.src = iframe.getAttribute('data-src');   // load + play
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        iframe.src = '';                                 // stop the video
+        document.body.style.overflow = '';
+    }
+
+    openBtn.addEventListener('click', openModal);
+
+    // Close when the backdrop or the close button (anything marked data-close) is clicked
+    modal.addEventListener('click', function (e) {
+        if (e.target.hasAttribute('data-close')) closeModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+    });
+})();
+</script>
 {% endblock %}
