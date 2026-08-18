@@ -89,3 +89,32 @@ def seed_db():
         conn.commit()
     finally:
         conn.close()
+
+
+def create_user(name, email, password_hash):
+    """Insert a new user and return the new row id.
+
+    Lets sqlite3.IntegrityError propagate on a duplicate email so callers can
+    handle the UNIQUE(email) constraint themselves.
+    """
+    conn = get_db()
+    try:
+        cur = conn.execute(
+            "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+            (name, email, password_hash),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def get_user_by_email(email):
+    """Return the user row for this email, or None if no account exists."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT * FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    finally:
+        conn.close()
