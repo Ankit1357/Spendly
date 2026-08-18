@@ -44,12 +44,15 @@ def register():
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         error = None
-        if not name or not email or not password:
+        if not name or not email or not password or not confirm_password:
             error = "All fields are required."
         elif len(password) < 8:
             error = "Password must be at least 8 characters."
+        elif password != confirm_password:
+            error = "Passwords do not match."
         elif get_user_by_email(email) is not None:
             error = "An account with that email already exists."
 

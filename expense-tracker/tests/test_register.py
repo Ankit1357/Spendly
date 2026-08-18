@@ -6,18 +6,26 @@ import database.db as db
 VALID_PW = "supersecret"
 
 
+def form(name="User", email="user@example.com", password=VALID_PW, confirm=None):
+    """Build register form data; confirm_password defaults to password."""
+    return {
+        "name": name,
+        "email": email,
+        "password": password,
+        "confirm_password": password if confirm is None else confirm,
+    }
+
+
 def test_get_renders_form(client):
     resp = client.get("/register")
     assert resp.status_code == 200
     assert b'name="email"' in resp.data
+    assert b'name="confirm_password"' in resp.data
     assert b"Create account" in resp.data
 
 
 def test_successful_registration_creates_hashed_user(client):
-    resp = client.post(
-        "/register",
-        data={"name": "Alice", "email": "alice@example.com", "password": VALID_PW},
-    )
+    resp = client.post("/register", data=form(name="Alice", email="alice@example.com"))
     assert resp.status_code == 302
     assert resp.headers["Location"].endswith("/")
 
@@ -30,10 +38,7 @@ def test_successful_registration_creates_hashed_user(client):
 
 
 def test_successful_registration_sets_session(client):
-    client.post(
-        "/register",
-        data={"name": "Bob", "email": "bob@example.com", "password": VALID_PW},
-    )
+    client.post("/register", data=form(name="Bob", email="bob@example.com"))
     row = db.get_user_by_email("bob@example.com")
     with client.session_transaction() as sess:
         assert sess["user_id"] == row["id"]
@@ -43,7 +48,7 @@ def test_successful_registration_sets_session(client):
 def test_success_flash_shown_on_landing(client):
     resp = client.post(
         "/register",
-        data={"name": "Cara", "email": "cara@example.com", "password": VALID_PW},
+        data=form(name="Cara", email="cara@example.com"),
         follow_redirects=True,
     )
     assert resp.status_code == 200
@@ -51,12 +56,11 @@ def test_success_flash_shown_on_landing(client):
 
 
 def test_duplicate_email_rejected(client):
-    data = {"name": "Dan", "email": "dan@example.com", "password": VALID_PW}
-    client.post("/register", data=data)
+    client.post("/register", data=form(name="Dan", email="dan@example.com"))
 
     resp = client.post(
         "/register",
-        data={"name": "Dan Two", "email": "dan@example.com", "password": "anotherpw"},
+        data=form(name="Dan Two", email="dan@example.com", password="anotherpw"),
     )
     assert resp.status_code == 200
     assert b"already exists" in resp.data
@@ -68,17 +72,27 @@ def test_duplicate_email_rejected(client):
 def test_short_password_rejected(client):
     resp = client.post(
         "/register",
-        data={"name": "Eve", "email": "eve@example.com", "password": "short"},
+        data=form(name="Eve", email="eve@example.com", password="short"),
     )
     assert resp.status_code == 200
     assert b"at least 8 characters" in resp.data
     assert db.get_user_by_email("eve@example.com") is None
 
 
+def test_mismatched_passwords_rejected(client):
+    resp = client.post(
+        "/register",
+        data=form(name="Ivan", email="ivan@example.com", confirm="different-pw"),
+    )
+    assert resp.status_code == 200
+    assert b"Passwords do not match" in resp.data
+    assert db.get_user_by_email("ivan@example.com") is None
+
+
 def test_blank_field_rejected_and_values_preserved(client):
     resp = client.post(
         "/register",
-        data={"name": "", "email": "frank@example.com", "password": VALID_PW},
+        data=form(name="", email="frank@example.com"),
     )
     assert resp.status_code == 200
     assert b"All fields are required" in resp.data
@@ -90,7 +104,7 @@ def test_blank_field_rejected_and_values_preserved(client):
 def test_whitespace_only_name_rejected(client):
     resp = client.post(
         "/register",
-        data={"name": "   ", "email": "grace@example.com", "password": VALID_PW},
+        data=form(name="   ", email="grace@example.com"),
     )
     assert resp.status_code == 200
     assert b"All fields are required" in resp.data
@@ -108,7 +122,7 @@ def test_duplicate_race_returns_friendly_error(client, monkeypatch):
 
     resp = client.post(
         "/register",
-        data={"name": "Heidi2", "email": "heidi@example.com", "password": VALID_PW},
+        data=form(name="Heidi2", email="heidi@example.com"),
     )
     assert resp.status_code == 200
     assert b"already exists" in resp.data
